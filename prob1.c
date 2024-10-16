@@ -46,25 +46,49 @@ int main(int argc, char *argv[])
 
     char buffer[1024];
     int total_litere_mici = 0;
-    ssize_t bytes_read;
+    ssize_t bytes_read;  //folosesc ssize_t fiindca asta returneaza functia read!!
     
     // Citește fișierul de intrare și procesează octeții
     while ((bytes_read = read(fd_in, buffer, sizeof(buffer))) > 0) 
+
+    // CE DRACU FAC PARAMETRII DIN READ?, fii atentă că acuma îți zic:
+    // primul e file descriptorul de mai sus de care vorbeam
+    // al doilea parametru din read este un pointer către un buffer în care datele citite vor fi stocate!
+    // al treilea reprezinta numărul maxim de octeți pe care read ar trebui să-i citească
     {
         for (ssize_t i = 0; i < bytes_read; i++) 
         {
             unsigned char octet = buffer[i];
             if (octet >= 97 && octet <= 122) 
             {
+                // cât timp caracterul curent la care mă aflu, e literă mică, atunci o voi printa
+                // și evident îmi măresc contorul pentru litere mici
                 printf("%c", octet);
                 total_litere_mici++;
             } 
             else 
             {
+                //dacă nu e literă mică, o voi printa sub forma caracterului său ascii în format hexa
                 printf("%02x", octet);
             }
         }
     }
+
+    /*
+    
+    Funcția read în C este utilizată pentru a citi date dintr-un fișier sau o resursă de I/O, 
+cum ar fi un socket sau un pipe. Aceasta returnează o valoare de tip ssize_t, care indică:
+
+---> Numărul de octeți citiți: Dacă operațiunea de citire are succes, read va returna numărul de octeți 
+efectiv citiți. Aceasta poate fi mai mică decât numărul cerut, mai ales la citirea din resurse care nu 
+au suficiente date disponibile în acel moment (cum ar fi o conexiune de rețea sau un fișier parțial gol).
+---> Zero (0): Un rezultat de 0 indică faptul că s-a ajuns la sfârșitul fișierului (EOF - End of File). 
+Acest lucru este valabil mai ales pentru citirea fișierelor și indică faptul că nu mai sunt date de citit.
+---> -1: O valoare de -1 indică o eroare. În acest caz, errno este setat pentru a specifica tipul erorii. 
+Poți folosi funcția perror pentru a afișa un mesaj de eroare corespunzător, sau strerror(errno) pentru
+a obține o descriere textuală a erorii.
+
+*/
 
     if (bytes_read < 0) 
     {
