@@ -100,6 +100,10 @@ a obține o descriere textuală a erorii.
 
     // Scrie mesajul în fișierul de ieșire
     char mesaj[256];
+    //Funcția snprintf este o funcție din biblioteca standard C care formatează un șir de caractere 
+    //și îl scrie într-un buffer, având la bază un format specificat. Aceasta este similară cu funcția 
+    //sprintf, dar cu un avantaj important: snprintf limitează numărul de caractere scrise în buffer, 
+    //prevenind astfel depășirea acestuia (buffer overflow).
     int length = snprintf(mesaj, sizeof(mesaj), "Numărul total de litere mici afișate este %d\n", total_litere_mici);
     if (write(fd_out, mesaj, length) < 0) 
     {
