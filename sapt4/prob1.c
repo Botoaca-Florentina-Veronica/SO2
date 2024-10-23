@@ -67,8 +67,16 @@ void process_directory(const char *dir_path)
     {
         char file_path[1024];
         snprintf(file_path, sizeof(file_path), "%s/%s", dir_path, entry->d_name);
+        //la adresa indicata de filepath (asigurandu-ma ca nu depasesc buffer-ul alocat),
+        //imi voi retine, pe rand, fiecare intrare din director. Cu alte cuvinte, imi retin 
+        //temporar in filepath, numele si calea fiecarui fisier aflat in acesta, pentru ca mai apoi sa verific
+        //daca sunt obisnuite(regular) sau nu
 
-        // Obținem informațiile despre fișier
+        //adica practic, snprintf imi scrie si imi aloca suficienta memorie pentru un buffer dat de mine
+        //cu tot cu adresa buffer-ului(filepath) cat si mariea sa maxima(masura de preventie a buffer overflow-ului),
+        // pentru fiecare intrare din director
+
+        // Obținem informațiile despre fișier folosind functia stat()
         if (stat(file_path, &file_stat) == -1) 
         {
             perror("Eroare la functia stat");
