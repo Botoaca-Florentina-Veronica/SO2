@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
 
 // TEORIE!!!
 /*
- Un pipe (sau "conductă") este un mecanism de comunicare între două procese într-un sistem de operare bazat pe Unix 
+ Un pipe este un mecanism de comunicare între două procese într-un sistem de operare bazat pe Unix 
 (precum Linux). Pipe-urile permit transferul de date într-un singur sens: un proces scrie în pipe și altul citește din pipe.
 Cum funcționează un pipe în mod fundamental
 Crearea unui pipe:
