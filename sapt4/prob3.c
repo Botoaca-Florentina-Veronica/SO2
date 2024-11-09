@@ -13,6 +13,9 @@ procesul părinte: va număra câți octeți a primit prin pipe, va afișa acest
 int esteVocala(char c) 
 {
     c = tolower(c);
+    //daca am de a face cu litere mici, verific direct daca sunt vocale, 
+    //insa daca am litere mari, mi le transform intai in litere mici
+    //si apoi fac verificarea aferenta
     return (c == 'a' || c == 'e' || c == 'i' || c == 'o' || c == 'u');
 }
 
@@ -69,6 +72,7 @@ int main(int argc, char *argv[])
     else 
     { // Cod pentru procesul părinte
         close(pipe_fd[1]); // Închidem capătul de scriere al pipe-ului în părinte
+        //urmând ca eu să citesc din pipe, așteptând întâi ca să se finalizeze procesul copil
 
         char buffer[1024];
         ssize_t bytes_read;
