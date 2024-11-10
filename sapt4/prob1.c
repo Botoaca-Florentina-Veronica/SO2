@@ -117,12 +117,10 @@ int main(int argc, char *argv[])
                         total_lowercase += lowercase_count;
                     }
                 }
-
-               printf("Numărul total de litere mici: %d\n", total_lowercase);
             }
         }
     }
-
+    printf("Numărul total de litere mici: %d\n", total_lowercase);
     closedir(dir);
     return 0;
 }
