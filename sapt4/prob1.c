@@ -44,14 +44,18 @@ int count_lowercase_letters(const char *file_path)
     }
 
     close(fd);
-
     return count;
 }
 
-// Funcție care procesează directorul și lansează procese copil
-void process_directory(const char *dir_path) 
+int main(int argc, char *argv[]) 
 {
-    DIR *dir = opendir(dir_path);
+    if (argc != 2) 
+    {
+        fprintf(stderr, "Utilizare: %s <cale_director>\n", argv[0]);
+        exit(1);
+    }
+
+    DIR *dir = opendir(argv[1]);
     if (dir == NULL) 
     {
         perror("Eroare la deschiderea directorului");
@@ -66,7 +70,7 @@ void process_directory(const char *dir_path)
     while ((entry = readdir(dir)) != NULL) 
     {
         char file_path[1024];
-        snprintf(file_path, sizeof(file_path), "%s/%s", dir_path, entry->d_name);
+        snprintf(file_path, sizeof(file_path), "%s/%s", argv[1], entry->d_name);
         //la adresa indicata de filepath (asigurandu-ma ca nu depasesc buffer-ul alocat),
         //imi voi retine, pe rand, fiecare intrare din director. Cu alte cuvinte, imi retin 
         //temporar in filepath, numele si calea fiecarui fisier aflat in acesta, pentru ca mai apoi sa verific
@@ -99,35 +103,27 @@ void process_directory(const char *dir_path)
                 int lowercase_count = count_lowercase_letters(file_path);
                 exit(lowercase_count); // Procesul copil iese cu numărul de litere mici
             }
+            else
+            {
+                //Proces parinte
+
+                // Așteptăm toate procesele copil și colectăm rezultatele
+                int status;
+                while (wait(&status) > 0) 
+                {
+                    if (WIFEXITED(status)) 
+                    {
+                        int lowercase_count = WEXITSTATUS(status);
+                        total_lowercase += lowercase_count;
+                    }
+                }
+
+               printf("Numărul total de litere mici: %d\n", total_lowercase);
+            }
         }
     }
-
-    // Așteptăm toate procesele copil și colectăm rezultatele
-    int status;
-    while (wait(&status) > 0) 
-    {
-        if (WIFEXITED(status)) 
-        {
-            int lowercase_count = WEXITSTATUS(status);
-            total_lowercase += lowercase_count;
-        }
-    }
-
-    printf("Numărul total de litere mici: %d\n", total_lowercase);
 
     closedir(dir);
-}
-
-int main(int argc, char *argv[]) 
-{
-    if (argc != 2) 
-    {
-        fprintf(stderr, "Utilizare: %s <cale_director>\n", argv[0]);
-        exit(1);
-    }
-
-    process_directory(argv[1]);
-
     return 0;
 }
 
