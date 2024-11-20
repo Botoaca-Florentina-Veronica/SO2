@@ -1,15 +1,20 @@
-Desigur! **Threadurile** sunt o modalitate de a rula mai multe sarcini (procese ușoare) simultan, în cadrul aceluiași proces. Ele sunt o componentă esențială în programarea concurentă și permit împărțirea unei aplicații în mai multe fluxuri de execuție care rulează independent, dar împărtășesc aceleași resurse de memorie.
+
+**Threadurile** sunt o modalitate de a rula mai multe sarcini (procese ușoare) simultan, în cadrul aceluiași proces. 
+Ele sunt o componentă esențială în programarea concurentă și permit împărțirea unei aplicații în mai multe fluxuri de 
+execuție care rulează independent, dar împărtășesc aceleași resurse de memorie.
 
 ### Concept de bază
 
 1. **Proces și thread**:
    - Un **proces** este o instanță a unui program în execuție. Are propriul spațiu de memorie și resurse alocate.
-   - Un **thread** este o unitate de execuție mai mică din cadrul unui proces. Mai multe threaduri din același proces împărtășesc același spațiu de memorie și resurse, dar au un *stack* propriu.
+   - Un **thread** este o unitate de execuție mai mică din cadrul unui proces. Mai multe threaduri din același proces 
+împărtășesc același spațiu de memorie și resurse, dar au un *stack* propriu.
 
 2. **Avantajele threadurilor**:
    - **Concurență**: Permite rularea simultană a mai multor sarcini.
    - **Eficiență**: Threadurile sunt mai ușor de creat și gestionează mai puține resurse decât procesele.
-   - **Partajarea memoriei**: Threadurile din același proces pot comunica rapid prin intermediul memoriei partajate, fără a folosi mecanisme lente precum IPC (Inter-Process Communication).
+   - **Partajarea memoriei**: Threadurile din același proces pot comunica rapid prin intermediul memoriei partajate, 
+fără a folosi mecanisme lente precum IPC (Inter-Process Communication).
 
 3. **Cum funcționează?**
    - Fiecare thread are:
@@ -22,7 +27,8 @@ Desigur! **Threadurile** sunt o modalitate de a rula mai multe sarcini (procese 
 
 ### Threadurile în POSIX (C)
 
-În programul C de mai sus, am folosit **biblioteca pthread** (POSIX Threads), care este un standard pentru programarea concurentă.
+În programul C de mai sus, am folosit **biblioteca pthread** (POSIX Threads), care este un standard pentru programarea 
+concurentă.
 
 #### Pașii principali pentru utilizarea threadurilor:
 
@@ -35,7 +41,8 @@ Desigur! **Threadurile** sunt o modalitate de a rula mai multe sarcini (procese 
    - `argument`: Argument opțional transmis funcției.
 
 2. **Funcția executată de thread**:
-   - Este o funcție care primește un singur argument de tip `void *` și returnează un `void *`. Acest lucru permite trecerea de date generice.
+   - Este o funcție care primește un singur argument de tip `void *` și returnează un `void *`. Acest lucru permite 
+trecerea de date generice.
    - Ex.: 
      ```c
      void *thread_function(void *arg) {
@@ -52,7 +59,8 @@ Desigur! **Threadurile** sunt o modalitate de a rula mai multe sarcini (procese 
    - Opțional, se poate obține valoarea returnată de thread prin al doilea argument.
 
 4. **Gestionarea memoriei**:
-   - Fiecare thread poate aloca și elibera memorie separat, dar trebuie să evităm conflictele dacă mai multe threaduri scriu/accesează simultan aceeași zonă de memorie.
+   - Fiecare thread poate aloca și elibera memorie separat, dar trebuie să evităm conflictele dacă mai multe threaduri 
+scriu/accesează simultan aceeași zonă de memorie.
 
 ---
 
@@ -110,13 +118,15 @@ Desigur! **Threadurile** sunt o modalitate de a rula mai multe sarcini (procese 
          return 0;
      }
      ```
-     **Atenție**: În acest exemplu poate apărea *data race* (conflict de acces simultan). Pentru a evita conflictele, trebuie folosite mecanisme de sincronizare, cum ar fi mutex-urile.
+     **Atenție**: În acest exemplu poate apărea *data race* (conflict de acces simultan). Pentru a evita conflictele, 
+trebuie folosite mecanisme de sincronizare, cum ar fi mutex-urile.
 
 ---
 
 ### Sincronizarea threadurilor
 
-Uneori este necesar să ne asigurăm că două threaduri nu accesează simultan aceeași resursă (cum ar fi variabile globale sau fișiere). Pentru aceasta folosim **mutex-uri** (mutual exclusion).
+Uneori este necesar să ne asigurăm că două threaduri nu accesează simultan aceeași resursă (cum ar fi variabile 
+globale sau fișiere). Pentru aceasta folosim **mutex-uri** (mutual exclusion).
 
 Exemplu:
 ```c
