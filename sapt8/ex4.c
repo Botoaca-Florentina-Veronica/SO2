@@ -21,9 +21,13 @@ typedef struct {
 int is_prime(int num) 
 {
     if (num < 2) return 0;
-    for (int i = 2; i <= sqrt(num); i++) 
+    int i;
+    for (i = 2; i <= sqrt(num); i++) 
     {
-        if (num % i == 0) return 0;
+        if (num % i == 0)
+        {
+            return 0;
+        }
     }
     return 1;
 }
@@ -90,7 +94,7 @@ int main(int argc, char *argv[])
         // Adăugăm restul la ultimul thread
         if (i == N - 1) 
         {
-            data->end += remainder;
+            data->end = data->end + remainder;
         }
 
         current_start = data->end + 1;
