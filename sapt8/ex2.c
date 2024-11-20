@@ -47,7 +47,7 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    char target = argv[1][0];
+    char target = argv[1][0];  //preluam primul caracter din al doilea argument al liniei de comandă (argv[1])
     char buffer[1024];
     pthread_t threads[1024];
     int thread_count = 0;
