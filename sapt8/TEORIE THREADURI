@@ -1,0 +1,162 @@
+Desigur! **Threadurile** sunt o modalitate de a rula mai multe sarcini (procese ușoare) simultan, în cadrul aceluiași proces. Ele sunt o componentă esențială în programarea concurentă și permit împărțirea unei aplicații în mai multe fluxuri de execuție care rulează independent, dar împărtășesc aceleași resurse de memorie.
+
+### Concept de bază
+
+1. **Proces și thread**:
+   - Un **proces** este o instanță a unui program în execuție. Are propriul spațiu de memorie și resurse alocate.
+   - Un **thread** este o unitate de execuție mai mică din cadrul unui proces. Mai multe threaduri din același proces împărtășesc același spațiu de memorie și resurse, dar au un *stack* propriu.
+
+2. **Avantajele threadurilor**:
+   - **Concurență**: Permite rularea simultană a mai multor sarcini.
+   - **Eficiență**: Threadurile sunt mai ușor de creat și gestionează mai puține resurse decât procesele.
+   - **Partajarea memoriei**: Threadurile din același proces pot comunica rapid prin intermediul memoriei partajate, fără a folosi mecanisme lente precum IPC (Inter-Process Communication).
+
+3. **Cum funcționează?**
+   - Fiecare thread are:
+     - **Cod executabil** (ce sarcină trebuie să efectueze).
+     - **Stack propriu** (pentru apeluri funcționale, variabile locale etc.).
+     - **Registru de program** (unde se află în timpul execuției).
+   - Threadurile sunt gestionate de un scheduler care decide cum să împartă timpul de execuție între threaduri.
+
+---
+
+### Threadurile în POSIX (C)
+
+În programul C de mai sus, am folosit **biblioteca pthread** (POSIX Threads), care este un standard pentru programarea concurentă.
+
+#### Pașii principali pentru utilizarea threadurilor:
+
+1. **Crearea unui thread**:
+   ```c
+   pthread_create(&thread_id, NULL, function, argument);
+   ```
+   - `&thread_id`: O variabilă de tip `pthread_t` care identifică threadul creat.
+   - `function`: Funcția care va fi rulată de thread.
+   - `argument`: Argument opțional transmis funcției.
+
+2. **Funcția executată de thread**:
+   - Este o funcție care primește un singur argument de tip `void *` și returnează un `void *`. Acest lucru permite trecerea de date generice.
+   - Ex.: 
+     ```c
+     void *thread_function(void *arg) {
+         // Codul executat de thread
+         return NULL;
+     }
+     ```
+
+3. **Așteptarea finalizării unui thread**:
+   ```c
+   pthread_join(thread_id, NULL);
+   ```
+   - Blochează firul principal (sau un alt thread) până când threadul specificat s-a terminat.
+   - Opțional, se poate obține valoarea returnată de thread prin al doilea argument.
+
+4. **Gestionarea memoriei**:
+   - Fiecare thread poate aloca și elibera memorie separat, dar trebuie să evităm conflictele dacă mai multe threaduri scriu/accesează simultan aceeași zonă de memorie.
+
+---
+
+### Exemple practice:
+
+1. **Crearea a două threaduri simple**:
+   ```c
+   #include <pthread.h>
+   #include <stdio.h>
+
+   void *print_message(void *arg) {
+       char *message = (char *)arg;
+       printf("%s\n", message);
+       return NULL;
+   }
+
+   int main() {
+       pthread_t thread1, thread2;
+
+       pthread_create(&thread1, NULL, print_message, "Thread 1");
+       pthread_create(&thread2, NULL, print_message, "Thread 2");
+
+       pthread_join(thread1, NULL);
+       pthread_join(thread2, NULL);
+
+       return 0;
+   }
+   ```
+
+2. **Cum se partajează memoria între threaduri?**
+   - Memoria globală este partajată de toate threadurile:
+     ```c
+     #include <pthread.h>
+     #include <stdio.h>
+
+     int counter = 0; // Variabilă globală
+
+     void *increment_counter(void *arg) {
+         for (int i = 0; i < 1000; i++) {
+             counter++;
+         }
+         return NULL;
+     }
+
+     int main() {
+         pthread_t thread1, thread2;
+
+         pthread_create(&thread1, NULL, increment_counter, NULL);
+         pthread_create(&thread2, NULL, increment_counter, NULL);
+
+         pthread_join(thread1, NULL);
+         pthread_join(thread2, NULL);
+
+         printf("Counter: %d\n", counter);
+         return 0;
+     }
+     ```
+     **Atenție**: În acest exemplu poate apărea *data race* (conflict de acces simultan). Pentru a evita conflictele, trebuie folosite mecanisme de sincronizare, cum ar fi mutex-urile.
+
+---
+
+### Sincronizarea threadurilor
+
+Uneori este necesar să ne asigurăm că două threaduri nu accesează simultan aceeași resursă (cum ar fi variabile globale sau fișiere). Pentru aceasta folosim **mutex-uri** (mutual exclusion).
+
+Exemplu:
+```c
+#include <pthread.h>
+#include <stdio.h>
+
+int counter = 0;
+pthread_mutex_t lock;
+
+void *increment_counter(void *arg) {
+    for (int i = 0; i < 1000; i++) {
+        pthread_mutex_lock(&lock);   // Blocare
+        counter++;
+        pthread_mutex_unlock(&lock); // Deblocare
+    }
+    return NULL;
+}
+
+int main() {
+    pthread_t thread1, thread2;
+
+    pthread_mutex_init(&lock, NULL);
+
+    pthread_create(&thread1, NULL, increment_counter, NULL);
+    pthread_create(&thread2, NULL, increment_counter, NULL);
+
+    pthread_join(thread1, NULL);
+    pthread_join(thread2, NULL);
+
+    pthread_mutex_destroy(&lock);
+
+    printf("Counter: %d\n", counter);
+    return 0;
+}
+```
+
+---
+
+### Pe scurt:
+- Threadurile permit rularea mai multor sarcini simultan în același proces.
+- Pthreads este biblioteca standard pentru lucrul cu threaduri în C.
+- Sincronizarea este necesară pentru a evita conflictele de acces simultan.
+- Threadurile sunt eficiente pentru probleme care pot fi împărțite în mai multe sarcini independente sau parțial dependente.
