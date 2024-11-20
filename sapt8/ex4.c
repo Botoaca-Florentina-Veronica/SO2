@@ -20,7 +20,10 @@ typedef struct {
 // Funcție pentru a verifica dacă un număr este prim
 int is_prime(int num) 
 {
-    if (num < 2) return 0;
+    if (num < 2)
+    {
+       return 0;
+    }
     int i;
     for (i = 2; i <= sqrt(num); i++) 
     {
