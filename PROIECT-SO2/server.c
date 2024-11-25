@@ -50,8 +50,9 @@ void sendBoardToClients(int client1_fd, int client2_fd)
 
 // **3. Funcția de verificare a câștigătorului**
 // Scop: Verifică dacă un jucător a câștigat pe rânduri, coloane sau diagonale.
-int checkWinner() {
-    int i;
+int checkWinner() 
+{
+    int i;  //i = linie, j = coloana
 
     // Verificare pe rânduri și coloane
     for (i = 0; i < SIDE; i++) 
@@ -113,9 +114,12 @@ int main()
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY; // Ascultă pe toate interfețele
     address.sin_port = htons(PORT);
+    // Adresa serverului este configurată pentru a asculta pe toate interfețele disponibile (INADDR_ANY) 
+    // și portul specificat (8080)
 
     // 3. Legarea socket-ului la portul specificat
     if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) 
+    //Socket-ul creat este legat la adresa și portul specificat folosind funcția bind()
     {
         perror("Bind failed");
         exit(EXIT_FAILURE);
@@ -124,6 +128,8 @@ int main()
     // 4. Ascultarea conexiunilor
     if (listen(server_fd, MAX_CLIENTS) < 0) 
     {
+        // Serverul începe să asculte pentru conexiuni pe socket-ul configurat, cu o coadă de așteptare 
+        // specificată (MAX_CLIENTS = 2)
         perror("Listen failed");
         exit(EXIT_FAILURE);
     }
@@ -134,6 +140,8 @@ int main()
     // Se acceptă conexiunea de la primul client
     if ((client1_fd = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0) 
     {
+        // Serverul folosește funcția accept() pentru a accepta conexiunea de la primul client
+        // Dacă funcția reușește, serverul afișează un mesaj de confirmare
         perror("Accept client 1 failed");
         exit(EXIT_FAILURE);
     }
@@ -142,6 +150,8 @@ int main()
     // Se acceptă conexiunea de la al doilea client
     if ((client2_fd = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0) 
     {
+        // Serverul acceptă conexiunea de la al doilea client într-un mod similar
+        // Dacă funcția reușește, serverul afișează un mesaj de confirmare
         perror("Accept client 2 failed");
         exit(EXIT_FAILURE);
     }
