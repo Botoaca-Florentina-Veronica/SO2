@@ -4,16 +4,23 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 
-#define PORT 8080
+// **Arhitectura**
+// Clientul este responsabil pentru:
+// - Conectarea la server.
+// - Primiterea tablei actualizate.
+// - Trimiterea mutărilor către server.
+// - Afișarea feedback-ului primit de la server.
 
+// **1. Funcția de primire și afișare a tablei**
+// Scop: Primește tabla de joc de la server și o afișează.
 void receiveAndShowBoard(int server_fd) 
 {
     char boardStr[1024];
     int bytesReceived = recv(server_fd, boardStr, sizeof(boardStr) - 1, 0);
     if (bytesReceived > 0) 
     {
-        boardStr[bytesReceived] = '\0';
-        printf("%s\n", boardStr);
+        boardStr[bytesReceived] = '\0'; // Termină șirul primit
+        printf("%s\n", boardStr); // Afișează tabla
     }
 }
 
@@ -22,12 +29,14 @@ int main(void)
     int sock = 0;
     struct sockaddr_in serv_addr;
 
+    // **2. Crearea și conectarea la server**
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
     {
         printf("\nEroare la crearea socket-ului\n");
         return -1;
     }
 
+    // Configurarea adresei serverului
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(PORT);
 
@@ -45,6 +54,7 @@ int main(void)
 
     printf("Conectat la server! Aștept tabla de joc...\n");
 
+    // **3. Buclă principală a clientului**
     while (1) 
     {
         receiveAndShowBoard(sock); // Primește și afișează tabla actualizată
