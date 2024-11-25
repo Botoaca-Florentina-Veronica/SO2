@@ -111,15 +111,17 @@ int main()
     }
 
     // 2. Configurarea adresei serverului
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY; // Ascultă pe toate interfețele
+    address.sin_family = AF_INET;  //setează familia de adrese la IPv4
+    address.sin_addr.s_addr = INADDR_ANY; // indică faptul că serverul va asculta pe toate interfețele de 
+    // rețea (adică nu se va restricționa doar la o anumită adresă IP)
     address.sin_port = htons(PORT);
-    // Adresa serverului este configurată pentru a asculta pe toate interfețele disponibile (INADDR_ANY) 
-    // și portul specificat (8080)
+    // setează portul (8080) pe care serverul va asculta
+    // Funcția htons convertește portul într-un format adecvat rețelei (Network Byte Order)
 
     // 3. Legarea socket-ului la portul specificat
     if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) 
-    //Socket-ul creat este legat la adresa și portul specificat folosind funcția bind()
+    // După ce socket-ul este creat, serverul trebuie să se asocieze cu o adresă IP și un port
+    // Acesta este procesul de bind (legare) care asociază socketul cu adresa și portul specificate anterior
     {
         perror("Bind failed");
         exit(EXIT_FAILURE);
@@ -128,10 +130,11 @@ int main()
     // 4. Ascultarea conexiunilor
     if (listen(server_fd, MAX_CLIENTS) < 0) 
     {
-        // Serverul începe să asculte pentru conexiuni pe socket-ul configurat, cu o coadă de așteptare 
-        // specificată (MAX_CLIENTS = 2)
+        // Serverul începe să asculte pentru conexiuni multiple pe socket-ul configurat,
+        // cu o coadă de așteptare specificată (MAX_CLIENTS = 2)
         perror("Listen failed");
         exit(EXIT_FAILURE);
+        //Dacă serverul nu poate asculta conexiunile, se va opri și va afișa un mesaj de eroare
     }
 
     printf("Așteptând jucători...\n");
@@ -140,8 +143,6 @@ int main()
     // Se acceptă conexiunea de la primul client
     if ((client1_fd = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0) 
     {
-        // Serverul folosește funcția accept() pentru a accepta conexiunea de la primul client
-        // Dacă funcția reușește, serverul afișează un mesaj de confirmare
         perror("Accept client 1 failed");
         exit(EXIT_FAILURE);
     }
@@ -150,15 +151,24 @@ int main()
     // Se acceptă conexiunea de la al doilea client
     if ((client2_fd = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0) 
     {
-        // Serverul acceptă conexiunea de la al doilea client într-un mod similar
-        // Dacă funcția reușește, serverul afișează un mesaj de confirmare
         perror("Accept client 2 failed");
         exit(EXIT_FAILURE);
     }
     printf("Jucătorul 2 conectat!\n");
 
+    /*
+       accept(server_fd, ...) blochează execuția și așteaptă conexiuni de la clienți
+       Când un client se conectează, funcția returnează un descriptor de fișier client1_fd (pentru primul 
+    client). La fel, se face și pentru al doilea client, returnând client2_fd.
+       Mesajele de succes ("Jucătorul 1 conectat!" și "Jucătorul 2 conectat!") sunt afișate pentru a 
+    indica faptul că cei doi clienți s-au conectat cu succes.
+    
+    */
+
     // **7. Inițializarea tablei și trimiterea către clienți**
     initializeBoard();
+    // După ce am acceptat conexiunile de la clienți, serverul trebuie să trimită și să primească mesaje
+    // de la aceștia. De exemplu, serverul trimite tabla de joc ambilor clienți:
     sendBoardToClients(client1_fd, client2_fd);
 
     int currentPlayer = 0; // Jucătorul curent (0 pentru X, 1 pentru O)
@@ -171,6 +181,8 @@ int main()
 
         // 8.1. Așteaptă mutarea de la jucătorul curent
         read(player_fd, buffer, sizeof(buffer));
+        //În acest caz, read() citește mișcarea jucătorului curent 
+        //(ca un număr) și o convertește într-o locație pe tabla de joc (linie și coloană)
         int move = atoi(buffer) - 1; // Mutarea (1-9) -> index în matrice
         int row = move / SIDE;
         int col = move % SIDE;
