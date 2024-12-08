@@ -125,7 +125,7 @@ void *threadFunction(void *arg)
     int i;
     for (i = start; i < end; i++) 
     {
-        partialSum[threadID] += a[i];
+        partialSum[threadID] = partialSum[threadID] + a[i];
         printf("%d ", i);
     }
 
@@ -144,7 +144,7 @@ int main(void)
         a[i] = i + 1;
     }
 
-    int segmentSize = vectorSize / N;
+    int IntervalSize = vectorSize / N;
     int rest = vectorSize % N;
 
     for (i = 0; i < N; i++)
@@ -158,14 +158,14 @@ int main(void)
         }
 
         // Setăm limitele intervalului și ID-ul thread-ului
-        data->start = i * segmentSize;
+        data->start = i * IntervalSize;
         if (i == N - 1) 
         {
-            data->end = data->start + segmentSize + rest;
+            data->end = data->start + IntervalSize + rest;
         } 
         else 
         {
-            data->end = data->start + segmentSize;
+            data->end = data->start + IntervalSize;
         }
         data->threadID = i;
         
@@ -186,7 +186,7 @@ int main(void)
     int totalSum = 0;
     for (i = 0; i < N; i++)
     {
-        totalSum += partialSum[i];
+        totalSum = totalSum + partialSum[i];
     }
 
     printf("\n\nTotal sum: %d\n", totalSum);
