@@ -192,3 +192,17 @@ int main(void)
     printf("\n\nTotal sum: %d\n", totalSum);
     return 0;
 }
+
+
+/*
+Pentru a împărți vectorul a în segmente egale și a atribui fiecărui thread un segment, fiecare thread trebuie să înceapă de la o poziție diferită în vector, pe baza indexului său. Iată de ce:
+
+Numărul total de elemente din vector: vectorSize = 17.
+Numărul de thread-uri: N = 2.
+Fiecare thread trebuie să proceseze aproximativ jumătate din vector. Cum vectorSize / N calculează dimensiunea unui segment (în cazul acesta 17 / 2 = 8 pentru fiecare thread), fiecare thread trebuie să înceapă de la o poziție diferită în vector.
+
+Detaliile calculului:
+Thread-ul 0 (cu i = 0) trebuie să înceapă la start = 0 * (vectorSize / N) = 0. Deci, va procesa primele 8 elemente (de la indexul 0 la 7).
+Thread-ul 1 (cu i = 1) trebuie să înceapă la start = 1 * (vectorSize / N) = 8. Deci, va procesa ultimele 9 elemente (de la indexul 8 la 16).
+Prin urmare, înmulțirea cu i este necesară pentru a calcula unde începe fiecare thread să proceseze în vector, astfel încât fiecare thread să primească un segment corect al vectorului.
+*/
