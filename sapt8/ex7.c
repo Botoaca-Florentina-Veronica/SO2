@@ -17,8 +17,8 @@ pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 // Structură pentru parametrii fiecărui thread
 typedef struct {
     FILE *file;
-    long start;
-    long end;
+    int start;
+    int end;
 } ThreadArg;
 
 // Funcția rulată de fiecare thread pentru a calcula histograma
@@ -30,7 +30,7 @@ void* create_histogram(void *arg)
 
     int local_histogram[NUM_CHARS] = {0};
     char c;
-    long position = threadArg->start;
+    int position = threadArg->start;
 
     while (position < threadArg->end && fread(&c, 1, 1, file) == 1) 
     {
@@ -39,14 +39,15 @@ void* create_histogram(void *arg)
     }
 
     pthread_mutex_lock(&mutex);
-    for (int i = 0; i < NUM_CHARS; i++) 
+    int i;
+    for (i = 0; i < NUM_CHARS; i++) 
     {
         global_histogram[i] += local_histogram[i];
     }
     pthread_mutex_unlock(&mutex);
 
     free(threadArg);
-    pthread_exit(NULL);
+    return NULL;
 }
 
 int main(int argc, char *argv[]) 
@@ -65,31 +66,39 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    FILE *file = fopen(filename, "rb");
-    if (!file) 
+    FILE *file = fopen(filename, "r");
+    if (file == NULL) 
     {
         perror("Eroare deschidere fișier");
         return EXIT_FAILURE;
     }
 
     fseek(file, 0, SEEK_END);
-    long file_size = ftell(file);
+    int file_size = ftell(file);
     rewind(file);
 
-    long partition_size = file_size / num_threads;
+    int partition_size = file_size / num_threads;
     pthread_t threads[num_threads];
 
-    for (int i = 0; i < num_threads; i++) 
+    int i;
+    for (i = 0; i < num_threads; i++) 
     {
         ThreadArg *arg = malloc(sizeof(ThreadArg));
         arg->file = file;
         arg->start = i * partition_size;
-        arg->end = (i == num_threads - 1) ? file_size : (i + 1) * partition_size;
+        if (i == num_threads - 1) 
+        {
+            arg->end = file_size;
+        } 
+        else 
+        {
+            arg->end = (i + 1) * partition_size;
+        }
 
         pthread_create(&threads[i], NULL, create_histogram, arg);
     }
 
-    for (int i = 0; i < num_threads; i++) 
+    for (i = 0; i < num_threads; i++) 
     {
         pthread_join(threads[i], NULL);
     }
@@ -98,7 +107,7 @@ int main(int argc, char *argv[])
     pthread_mutex_destroy(&mutex);
 
     printf("Histograma finală:\n");
-    for (int i = 0; i < NUM_CHARS; i++) 
+    for (i = 0; i < NUM_CHARS; i++) 
     {
         if (global_histogram[i] > 0)
         {
