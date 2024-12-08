@@ -30,7 +30,7 @@ void *threadFunction(void *arg)
     partialSum[data] = 0;
     for (i = start; i < end; i++) 
     {
-        partialSum[data] += a[i];
+        partialSum[data] = partialSum[data] + a[i];
     }
 
     return NULL;
@@ -73,7 +73,7 @@ int main(void)
     int totalSum = 0;
     for (i = 0; i < N; i++)
     {
-        totalSum += partialSum[i];
+        totalSum = totalSum + partialSum[i];
     }
 
     printf("Total sum: %d\n", totalSum);
