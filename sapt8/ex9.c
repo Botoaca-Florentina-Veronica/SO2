@@ -1,3 +1,8 @@
+/*
+  Împarte un vector în segmente egale, fiecare fir calculează suma segmentului său, iar programul 
+principal calculează suma totală.
+*/
+
 #include<stdio.h>
 #include<string.h>
 #include<stdlib.h>
@@ -28,11 +33,13 @@ void *threadFunction(void *arg)
     }
 
     partialSum[data] = 0;
+    // Mesaj pentru thread
+    printf("\nThread %d is processing indices [%d, %d):\n", data, start, end);
     for (i = start; i < end; i++) 
     {
         partialSum[data] = partialSum[data] + a[i];
+        printf("%d ", i);
     }
-
     return NULL;
 }
 
@@ -76,6 +83,6 @@ int main(void)
         totalSum = totalSum + partialSum[i];
     }
 
-    printf("Total sum: %d\n", totalSum);
+    printf("\n\nTotal sum: %d\n", totalSum);
     return 0;
 }
