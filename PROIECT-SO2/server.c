@@ -3,11 +3,11 @@
 #include <string.h>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <pthread.h>
 
-// Constante folosite
-#define SIDE 3      // Dimensiunea tablei de joc (3x3)
-#define PORT 8080   // Portul pe care serverul ascultă conexiunile
-#define MAX_CLIENTS 2 // Numărul maxim de clienți suportat
+#define SIDE 3       // Dimensiunea tablei de joc (3x3)
+#define PORT 8080    // Portul pe care serverul ascultă conexiunile
+#define MAX_CLIENTS 2 // Numărul maxim de clienți per joc
 
 // **Arhitectura**
 // Serverul este responsabil pentru:
@@ -16,214 +16,232 @@
 // - Sincronizarea și trimiterea tablei de joc către clienți.
 // - Verificarea câștigătorului/remizei după fiecare mutare.
 
-char board[SIDE][SIDE]; // Reprezentarea tablei de joc ca matrice 2D de caractere
+// Structură pentru gestionarea datelor unui joc
+typedef struct {
+    int client1_fd;                 // File descriptor pentru primul client
+    int client2_fd;                 // File descriptor pentru al doilea client
+    char client1_name[64];          // Numele primului jucător
+    char client2_name[64];          // Numele celui de-al doilea jucător
+    char board[SIDE][SIDE];         // Tabla de joc
+    int currentPlayer;              // Jucătorul curent (0 sau 1)
+} Game;
 
-// **1. Funcția de inițializare a tablei de joc**
-// Scop: Să reseteze tabla de joc la o stare inițială, cu spații libere.
-void initializeBoard() 
+// Funcția de inițializare a tablei de joc
+// Scop: Să reseteze tabla de joc la o stare inițială, cu spații libere
+void initializeBoard(char board[SIDE][SIDE]) 
 {
     int i, j;
     for (i = 0; i < SIDE; i++) 
     {
         for (j = 0; j < SIDE; j++) 
         {
-            board[i][j] = ' '; // Fiecare celulă este inițial goală
+            board[i][j] = ' ';  // Fiecare celulă este inițializată ca spațiu liber
         }
     }
 }
 
-// **2. Funcția de trimitere a tablei către clienți**
-// Scop: Să creeze un șir care reprezintă tabla și să-l trimită ambilor clienți.
-void sendBoardToClients(int client1_fd, int client2_fd) 
+// Funcția de trimitere a tablei către clienți
+// Scop: Să sincronizeze starea tablei de joc cu ambii clienți
+void sendBoardToClients(Game *game) 
 {
-    char boardStr[1024]; // Șir pentru a stoca tabla de joc formatată
+    char boardStr[1024];
     snprintf(boardStr, sizeof(boardStr),
-        "Tabla de joc:\n %c | %c | %c \n-----------\n %c | %c | %c \n-----------\n %c | %c | %c \n",
-        board[0][0], board[0][1], board[0][2],
-        board[1][0], board[1][1], board[1][2],
-        board[2][0], board[2][1], board[2][2]);
+             "Tabla de joc:\n %c | %c | %c \n-----------\n %c | %c | %c \n-----------\n %c | %c | %c \n",
+             game->board[0][0], game->board[0][1], game->board[0][2],
+             game->board[1][0], game->board[1][1], game->board[1][2],
+             game->board[2][0], game->board[2][1], game->board[2][2]);
 
-    // Trimiterea tablei ambilor clienți
-    send(client1_fd, boardStr, strlen(boardStr), 0);
-    send(client2_fd, boardStr, strlen(boardStr), 0);
+    send(game->client1_fd, boardStr, strlen(boardStr), 0); // Trimite tabla către primul client
+    send(game->client2_fd, boardStr, strlen(boardStr), 0); // Trimite tabla către al doilea client
 }
 
-// **3. Funcția de verificare a câștigătorului**
-// Scop: Verifică dacă un jucător a câștigat pe rânduri, coloane sau diagonale.
-int checkWinner() 
+// Funcția de verificare a câștigătorului
+// Scop: Să determine dacă există un câștigător pe tabla de joc
+int checkWinner(char board[SIDE][SIDE]) 
 {
-    int i;  //i = linie, j = coloana
-
-    // Verificare pe rânduri și coloane
+    int i;
     for (i = 0; i < SIDE; i++) 
     {
+        // Verificare linii
         if (board[i][0] == board[i][1] && board[i][1] == board[i][2] && board[i][0] != ' ')
         {
-            return 1; // Câștigător pe rând
+            return 1;
         }
+        // Verificare coloane
         if (board[0][i] == board[1][i] && board[1][i] == board[2][i] && board[0][i] != ' ')
         {
-            return 1; // Câștigător pe coloană
+            return 1;
         }
     }
-    // Verificare pe diagonale
+    // Verificare diagonale
     if (board[0][0] == board[1][1] && board[1][1] == board[2][2] && board[0][0] != ' ')
     {
-        return 1; // Câștigător pe diagonala principală
+        return 1;
     }
     if (board[0][2] == board[1][1] && board[1][1] == board[2][0] && board[0][2] != ' ')
     {
-        return 1; // Câștigător pe diagonala secundară
+        return 1;
     }
-    return 0; // Nicio condiție de câștig
+    return 0; // Niciun câștigător detectat
 }
 
-// **4. Funcția de verificare a remizei**
-// Scop: Determină dacă tabla este completă fără să existe un câștigător.
-int checkDraw() 
+// Funcția de verificare a remizei
+// Scop: Să determine dacă toate celulele sunt ocupate și jocul este remiză
+int checkDraw(char board[SIDE][SIDE]) 
 {
     int i, j;
     for (i = 0; i < SIDE; i++) 
     {
         for (j = 0; j < SIDE; j++) 
         {
-            if (board[i][j] == ' ')
-            {
-                return 0; // Cel puțin o celulă este goală
-            }
+            if (board[i][j] == ' ') return 0; // Mai există mutări disponibile
         }
     }
-    return 1; // Toate celulele sunt ocupate
+    return 1; // Toate celulele sunt ocupate, deci este remiză
+}
+
+// Funcția care gestionează un joc
+// Scop: Să coordoneze jocul între doi jucători
+void *handleGame(void *arg) 
+{
+    Game *game = (Game *)arg; // Conversia argumentului la structura Game
+    char buffer[1024];
+    int currentPlayerFD;
+
+    initializeBoard(game->board);
+    // După ce am acceptat conexiunile de la clienți, serverul trebuie să trimită și să primească mesaje
+    // de la aceștia. De exemplu, serverul trimite tabla de joc ambilor clienți:
+    sendBoardToClients(game);  
+
+    while (1) 
+    {
+        currentPlayerFD = (game->currentPlayer == 0) ? game->client1_fd : game->client2_fd; // Determină jucătorul curent
+        char *playerName = (game->currentPlayer == 0) ? game->client1_name : game->client2_name;
+
+        // Așteaptă mutarea jucătorului curent
+        bzero(buffer, sizeof(buffer));  // Resetează bufferul
+        read(currentPlayerFD, buffer, sizeof(buffer)); 
+        //În acest caz, read() citește mișcarea jucătorului curent 
+        //(ca un număr) și o convertește într-o locație pe tabla de joc (linie și coloană)
+
+        int move = atoi(buffer) - 1;    // Convertirea mutării în index
+        int row = move / SIDE;          // Determină linia
+        int col = move % SIDE;          // Determină coloana
+
+        // Validarea mutării
+        if (move < 0 || move >= SIDE * SIDE || game->board[row][col] != ' ') 
+        {
+            char *invalidMoveMsg = "Mutare invalidă! Încercați din nou.\n";
+            send(currentPlayerFD, invalidMoveMsg, strlen(invalidMoveMsg), 0); // Notifică jucătorul despre mutarea invalidă
+            continue;  // Se cere o mutare nouă
+        }
+
+        // Actualizarea tablei
+        game->board[row][col] = (game->currentPlayer == 0) ? 'X' : 'O';
+        sendBoardToClients(game); // Trimite tabla actualizată către clienți
+
+        // Verificare câștigător/remiză
+        if (checkWinner(game->board)) 
+        {
+            char winMsg[128], loseMsg[128];
+            snprintf(winMsg, sizeof(winMsg), "%s a câștigat!\n", playerName); // Mesaj pentru câștigător
+            snprintf(loseMsg, sizeof(loseMsg), "%s a pierdut!\n", (game->currentPlayer == 0) ? game->client2_name : game->client1_name); // Mesaj pentru învins
+
+            send(currentPlayerFD, winMsg, strlen(winMsg), 0); // Trimite mesajul câștigătorului
+            send((currentPlayerFD == game->client1_fd) ? game->client2_fd : game->client1_fd, loseMsg, strlen(loseMsg), 0); // Trimite mesajul învinsului
+            break; // Termină jocul
+        }
+
+        if (checkDraw(game->board)) 
+        {
+            char *drawMsg = "Remiză!\n";
+            send(game->client1_fd, drawMsg, strlen(drawMsg), 0); // Notifică ambii jucători despre remiză
+            send(game->client2_fd, drawMsg, strlen(drawMsg), 0);
+            break; // Jocul s-a terminat cu remiză
+        }
+
+        // Schimbă jucătorul curent
+        game->currentPlayer = !game->currentPlayer;
+    }
+
+    // Închide conexiunile la finalul jocului
+    close(game->client1_fd);
+    close(game->client2_fd);
+    free(game); // Eliberare memorie alocată pentru joc
+    pthread_exit(NULL); // Terminarea threadului
 }
 
 int main() 
 {
-    int server_fd, client1_fd, client2_fd;
-    struct sockaddr_in address;
+    int server_fd;
+    struct sockaddr_in address; // Structura pentru configurarea serverului
     int addrlen = sizeof(address);
 
-    // **5. Creare și configurare server**
-    // 1. Crearea unui socket pentru conexiuni TCP
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) 
     {
-        perror("Socket failed");
+        perror("Socket failed"); // Eroare la crearea socketului
         exit(EXIT_FAILURE);
     }
 
-    // 2. Configurarea adresei serverului
-    address.sin_family = AF_INET;  //setează familia de adrese la IPv4
-    address.sin_addr.s_addr = INADDR_ANY; // indică faptul că serverul va asculta pe toate interfețele de 
-    // rețea (adică nu se va restricționa doar la o anumită adresă IP)
-    address.sin_port = htons(PORT);
-    // setează portul (8080) pe care serverul va asculta
+    address.sin_family = AF_INET; // Setează familia de adrese la IPv4
+    address.sin_addr.s_addr = INADDR_ANY;  // Ascultă pe toate interfețele
+    address.sin_port = htons(PORT); // Setează portul (8080) pe care serverul va asculta
     // Funcția htons convertește portul într-un format adecvat rețelei (Network Byte Order)
 
-    // 3. Legarea socket-ului la portul specificat
     if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0) 
-    // După ce socket-ul este creat, serverul trebuie să se asocieze cu o adresă IP și un port
-    // Acesta este procesul de bind (legare) care asociază socketul cu adresa și portul specificate anterior
     {
-        perror("Bind failed");
+        // După ce socket-ul este creat, serverul trebuie să se asocieze cu o adresă IP și un port
+        // Acesta este procesul de bind (legare) care asociază socketul cu adresa și portul specificate anterior
+        perror("Bind failed"); // Eroare la legarea socketului de adresă/port
         exit(EXIT_FAILURE);
     }
 
-    // 4. Ascultarea conexiunilor
-    if (listen(server_fd, MAX_CLIENTS) < 0) 
+    if (listen(server_fd, 10) < 0) 
     {
         // Serverul începe să asculte pentru conexiuni multiple pe socket-ul configurat,
-        // cu o coadă de așteptare specificată (MAX_CLIENTS = 2)
-        perror("Listen failed");
-        exit(EXIT_FAILURE);
-        //Dacă serverul nu poate asculta conexiunile, se va opri și va afișa un mesaj de eroare
-    }
-
-    printf("Așteptând jucători...\n");
-
-    // **6. Acceptarea conexiunilor**
-    // Se acceptă conexiunea de la primul client
-    if ((client1_fd = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0) 
-    {
-        perror("Accept client 1 failed");
+        // cu o coadă de așteptare specificată, max 10
+        perror("Listen failed"); // Eroare la configurarea serverului pentru a asculta conexiuni
         exit(EXIT_FAILURE);
     }
-    printf("Jucătorul 1 conectat!\n");
 
-    // Se acceptă conexiunea de la al doilea client
-    if ((client2_fd = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0) 
-    {
-        perror("Accept client 2 failed");
-        exit(EXIT_FAILURE);
-    }
-    printf("Jucătorul 2 conectat!\n");
+    printf("Server pornit, aștept conexiuni...\n");
 
-    /*
-       accept(server_fd, ...) blochează execuția și așteaptă conexiuni de la clienți
-       Când un client se conectează, funcția returnează un descriptor de fișier client1_fd (pentru primul 
-    client). La fel, se face și pentru al doilea client, returnând client2_fd.
-       Mesajele de succes ("Jucătorul 1 conectat!" și "Jucătorul 2 conectat!") sunt afișate pentru a 
-    indica faptul că cei doi clienți s-au conectat cu succes.
-    
-    */
-
-    // **7. Inițializarea tablei și trimiterea către clienți**
-    initializeBoard();
-    // După ce am acceptat conexiunile de la clienți, serverul trebuie să trimită și să primească mesaje
-    // de la aceștia. De exemplu, serverul trimite tabla de joc ambilor clienți:
-    sendBoardToClients(client1_fd, client2_fd);
-
-    int currentPlayer = 0; // Jucătorul curent (0 pentru X, 1 pentru O)
-
-    // **8. Buclă principală a jocului**
     while (1) 
     {
-        int player_fd = currentPlayer == 0 ? client1_fd : client2_fd;
-        char buffer[1024] = {0};
+        Game *game = (Game *)malloc(sizeof(Game)); // Alocare memorie pentru un nou joc
+        pthread_t thread_id;
 
-        // 8.1. Așteaptă mutarea de la jucătorul curent
-        read(player_fd, buffer, sizeof(buffer));
-        //În acest caz, read() citește mișcarea jucătorului curent 
-        //(ca un număr) și o convertește într-o locație pe tabla de joc (linie și coloană)
-        int move = atoi(buffer) - 1; // Mutarea (1-9) -> index în matrice
-        int row = move / SIDE;
-        int col = move % SIDE;
+        // Acceptă primul jucător
+        game->client1_fd = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen);
+        read(game->client1_fd, game->client1_name, sizeof(game->client1_name)); // Citește numele jucătorului 1
+        printf("Jucătorul 1 conectat: %s\n", game->client1_name);
 
-        // 8.2. Validarea mutării
-        if (move < 0 || move >= SIDE * SIDE || board[row][col] != ' ') 
-        {
-            char *invalidMoveMsg = "Mutare invalidă! Încercați din nou.\n";
-            send(player_fd, invalidMoveMsg, strlen(invalidMoveMsg), 0);
-            continue; // Se cere o mutare nouă
-        }
+        // Acceptă al doilea jucător
+        game->client2_fd = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen);
+        read(game->client2_fd, game->client2_name, sizeof(game->client2_name)); // Citește numele jucătorului 2
+        printf("Jucătorul 2 conectat: %s\n", game->client2_name);
 
-        // 8.3. Actualizează tabla
-        board[row][col] = (currentPlayer == 0) ? 'X' : 'O';
-        sendBoardToClients(client1_fd, client2_fd);
+        /*
+            Funcția accept(server_fd, ...) blochează execuția până când un client se conectează.
+         Când un client se conectează, accept returnează un descriptor de fișier (client1_fd pentru primul client).
+         După ce conexiunea este stabilită, se citește numele jucătorului de la client folosind funcția read.
+         Același proces se repetă pentru al doilea client, iar descriptorul pentru acesta este salvat în client2_fd.
+         Mesajele de succes ("Jucătorul 1 conectat: <nume>" și "Jucătorul 2 conectat: <nume>") sunt afișate pentru
+         a confirma conectarea cu succes a ambilor jucători.
 
-        // 8.4. Verifică starea jocului
-        if (checkWinner()) 
-        {
-            char *winMsg = "Ați câștigat!\n";
-            char *loseMsg = "Ați pierdut!\n";
-            send(player_fd, winMsg, strlen(winMsg), 0);
-            send(player_fd == client1_fd ? client2_fd : client1_fd, loseMsg, strlen(loseMsg), 0);
-            break; // Jocul s-a terminat
-        }
 
-        if (checkDraw()) 
-        {
-            char *drawMsg = "Remiză!\n";
-            send(client1_fd, drawMsg, strlen(drawMsg), 0);
-            send(client2_fd, drawMsg, strlen(drawMsg), 0);
-            break; // Jocul s-a terminat cu remiză
-        }
+         client1_fd și client2_fd sunt „canalele” prin care serverul comunică cu fiecare dintre cei doi clienți
+        */
 
-        // 8.5. Schimbă jucătorul curent
-        currentPlayer = !currentPlayer;
+
+        // Inițializează jocul
+        game->currentPlayer = 0; // Jucătorul 1 începe
+
+        // Creează un thread pentru a gestiona jocul
+        pthread_create(&thread_id, NULL, handleGame, (void *)game);
+        pthread_detach(thread_id); // Eliberare automată a resurselor threadului
     }
 
-    // **9. Închide conexiunile**
-    close(client1_fd);
-    close(client2_fd);
-    close(server_fd);
+    close(server_fd); // Închide socketul serverului
     return 0;
 }
