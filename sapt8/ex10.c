@@ -104,7 +104,9 @@ int main(void) {
 
 
 /*
-Mai jos este un exemplu de program în C care implementează cerința utilizând două threaduri: unul pentru a citi de la tastatură și a trimite datele către server prin socket, iar celălalt pentru a citi mesajele de la server și a le afișa pe ecran. Pentru a realiza acest lucru, am utilizat biblioteca `pthread` pentru gestionarea threadurilor.
+Mai sus este un exemplu de program în C care implementează cerința utilizând două threaduri: unul pentru a citi de la tastatură și a trimite datele către server 
+prin socket, iar celălalt pentru a citi mesajele de la server și a le afișa pe ecran. Pentru a realiza acest lucru, am utilizat biblioteca `pthread` pentru gestionarea
+threadurilor.
 
 ### Explicație
 
