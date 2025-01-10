@@ -131,57 +131,68 @@ int main(void)
 #include<sys/socket.h>
 #include<netinet/in.h>
 
+// Definirea portului serverului și dimensiunea buffer-ului
 #define PORT 8080
 #define BUFFER_SIZE 1024
 
 int main(void) 
 {
-    int sockfd = 0;
-    struct sockaddr_in server_fd;
-    char line[BUFFER_SIZE];
-    char buffer[BUFFER_SIZE];
+    int sockfd = 0; // Descriptorul socket-ului pentru client
+    struct sockaddr_in server_fd; // Structura pentru stocarea informațiilor despre server
+    char line[BUFFER_SIZE]; // Buffer pentru a citi datele introduse de utilizator
+    char buffer[BUFFER_SIZE]; // Buffer pentru a stoca răspunsurile primite de la server
 
+    // Crearea unui socket
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
     {
+        // Dacă apare o eroare la crearea socket-ului, afișăm mesajul și terminăm execuția
         perror("Error creating socket");
         exit(1);
     }
 
-    memset(&server_fd, 0, sizeof(server_fd));
-    server_fd.sin_family = AF_INET;
-    server_fd.sin_addr.s_addr = INADDR_ANY;
-    server_fd.sin_port = htons(PORT);
+    // Inițializăm structura `server_fd` cu informațiile necesare
+    memset(&server_fd, 0, sizeof(server_fd)); // Setăm toate câmpurile structurii la 0
+    server_fd.sin_family = AF_INET; // Utilizăm familia de protocoale IPv4
+    server_fd.sin_addr.s_addr = INADDR_ANY; // Adresa serverului (oricare adresă locală)
+    server_fd.sin_port = htons(PORT); // Setăm portul serverului (convertit în format rețea)
 
+    // Conectarea la server
     if (connect(sockfd, (struct sockaddr *)&server_fd, sizeof(server_fd)) < 0) 
     {
+        // Dacă apare o eroare la conectare, afișăm mesajul și terminăm execuția
         perror("Error connecting to server");
         exit(1);
     }
-    printf("Connected to server\n");
+    printf("Connected to server\n"); // Confirmăm conectarea reușită
 
+    // Bucla principală pentru interacțiunea clientului cu serverul
     while (1) 
     {
-        printf("Enter a line: ");
+        printf("Enter a line: "); // Solicităm utilizatorului să introducă o linie de text
         if (!fgets(line, BUFFER_SIZE, stdin)) 
         {
+            // Dacă apare o eroare la citirea datelor de la tastatură
             printf("Error reading input");
             break;
         }
 
+        // Trimitem linia introdusă către server
         send(sockfd, line, strlen(line), 0);
 
+        // Citim răspunsul serverului
         int bytes_read = read(sockfd, buffer, BUFFER_SIZE);
         if (bytes_read <= 0) 
         {
+            // Dacă serverul s-a deconectat, afișăm mesajul și terminăm execuția
             printf("Server disconnected\n");
             exit(1);
         }
 
-        buffer[bytes_read] = '\0'; // Asigură terminarea stringului
-        printf("Server response: %s\n", buffer);
+        buffer[bytes_read] = '\0'; // Adăugăm terminatorul de șir pentru a crea un string valid
+        printf("Server response: %s\n", buffer); // Afișăm răspunsul primit de la server
     }
 
+    // Închidem socket-ul
     close(sockfd);
     return 0;
 }
-
