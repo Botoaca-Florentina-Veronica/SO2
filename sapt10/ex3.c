@@ -66,40 +66,36 @@ int main(int argc, char *argv[])
     const char *ip = argv[1];
     int port = atoi(argv[2]);
 
-    int server_socket;
-    struct sockaddr_in server_addr;
+    int server_fd;
+    struct sockaddr_in server_bind;
 
     // Ignorăm semnalele trimise de procesele fiu la terminare
     signal(SIGCHLD, SIG_IGN);
 
     // Creăm socketul serverului
-    if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
+    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
     {
         perror("socket failed");
         exit(EXIT_FAILURE);
     }
 
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(port);
-    if (inet_pton(AF_INET, ip, &server_addr.sin_addr) <= 0) 
-    {
-        perror("inet_pton failed");
-        exit(EXIT_FAILURE);
-    }
+    server_bind.sin_family = AF_INET;
+    server_bind.sin_port = htons(port);
+    server_bind.sin_addr.s_addr = INADDR_ANY;
 
     // Legăm socketul la adresa și portul specificate
-    if (bind(server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) 
+    if (bind(server_fd, (struct sockaddr *)&server_bind, sizeof(server_bind)) < 0) 
     {
         perror("bind failed");
-        close(server_socket);
+        close(server_fd);
         exit(EXIT_FAILURE);
     }
 
     // Punem serverul în modul de ascultare
-    if (listen(server_socket, 5) < 0) 
+    if (listen(server_fd, 5) < 0) 
     {
         perror("listen failed");
-        close(server_socket);
+        close(server_fd);
         exit(EXIT_FAILURE);
     }
 
@@ -107,12 +103,12 @@ int main(int argc, char *argv[])
 
     while (1) 
     {
-        int client_socket;
+        int client_fd;
         struct sockaddr_in client_addr;
         socklen_t client_len = sizeof(client_addr);
 
         // Acceptăm o conexiune de la un client
-        if ((client_socket = accept(server_socket, (struct sockaddr *)&client_addr, &client_len)) < 0) 
+        if ((client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_len)) < 0) 
         {
             perror("accept failed");
             continue;
@@ -123,22 +119,22 @@ int main(int argc, char *argv[])
         if (pid < 0) 
         {
             perror("fork failed");
-            close(client_socket);
+            close(client_fd);
             continue;
         } 
         else if (pid == 0) 
         {
             // Procesul fiu
-            close(server_socket); // Procesul fiu nu are nevoie de socketul serverului
-            handle_client(client_socket);
+            close(server_fd); // Procesul fiu nu are nevoie de socketul serverului
+            handle_client(client_fd);
         } 
         else 
         {
             // Procesul părinte
-            close(client_socket); // Procesul părinte nu are nevoie de socketul clientului
+            close(client_fd); // Procesul părinte nu are nevoie de socketul clientului
         }
     }
 
-    close(server_socket);
+    close(server_fd);
     return 0;
 }
