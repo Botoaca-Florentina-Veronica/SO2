@@ -1,139 +1,117 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <ctype.h>
-#include <pthread.h>
+#include<stdio.h>
+#include<string.h>
+#include<stdlib.h>
+#include<arpa/inet.h>
+#include<unistd.h>
+#include<ctype.h>
+#include<pthread.h>
+#include<sys/socket.h>
 
+#define PORT 8080
 #define BUFFER_SIZE 1024
 
-// Structura pentru a transmite argumentele unui thread
-typedef struct {
-    int client_socket;
-} thread_args_t;
-
-// Funcție pentru a transforma literele mari în mici și invers
-void transform_text(char *text) 
+void transform_text(char *cuvant)
 {
-    for (int i = 0; text[i] != '\0'; i++) 
+    int i;
+    for(i = 0; i < strlen(cuvant); i++)
     {
-        if (islower(text[i])) 
+        if(islower(cuvant[i]))
         {
-            text[i] = toupper(text[i]);
-        } 
-        else if (isupper(text[i])) 
+            cuvant[i] = toupper(cuvant[i]);
+        }
+        else if(isupper(cuvant[i]))
         {
-            text[i] = tolower(text[i]);
+            cuvant[i] = tolower(cuvant[i]);
         }
     }
 }
 
-// Funcție pentru gestionarea conexiunii unui client
-void *handle_client(void *args) 
+void *handle_client(void *client_socket_ptr)
 {
-    thread_args_t *thread_args = (thread_args_t *)args;
-    int client_socket = thread_args->client_socket;
+    int client_fd = *(int *)client_socket_ptr;
+    free(client_socket_ptr);
+
     char buffer[BUFFER_SIZE];
     ssize_t bytes_read;
 
-    free(thread_args); // Eliberăm memoria alocată pentru argumente
-
-    while ((bytes_read = read(client_socket, buffer, sizeof(buffer) - 1)) > 0) 
+    while((bytes_read = read(client_fd, buffer, sizeof(buffer) - 1)) > 0)
     {
-        buffer[bytes_read] = '\0'; // Adăugăm terminator de șir
-        transform_text(buffer);    // Transformăm textul
-        write(client_socket, buffer, strlen(buffer)); // Trimitem textul transformat înapoi
+        buffer[bytes_read] = '\0';
+        transform_text(buffer);
+
+        if(write(client_fd, buffer, strlen(buffer)) < 0)
+        {
+            perror("Eroare la scrierea datelor către client");
+            break;
+        }
+    }
+    if(bytes_read < 0)
+    {
+        perror("Eroare la citirea datelor de la client");
     }
 
-    close(client_socket); // Închidem conexiunea cu clientul
+    close(client_fd);
     return NULL;
 }
 
-int main(int argc, char *argv[]) 
+int main(void)
 {
-    if (argc != 3) 
+    int server_fd;
+    struct sockaddr_in server_bind, client_addr;
+
+    if((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
-        fprintf(stderr, "Usage: %s <ip> <port>\n", argv[0]);
-        exit(EXIT_FAILURE);
+        perror("Eroare la socket!");
+        exit(1);
     }
 
-    const char *ip = argv[1];
-    int port = atoi(argv[2]);
+    memset(&server_bind, 0, sizeof(server_bind));
+    server_bind.sin_family = AF_INET;
+    server_bind.sin_addr.s_addr = INADDR_ANY;
+    server_bind.sin_port = htons(PORT);
 
-    int server_socket;
-    struct sockaddr_in server_addr;
-
-    // Creăm socketul serverului
-    if ((server_socket = socket(AF_INET, SOCK_STREAM, 0)) < 0) 
+    if(bind(server_fd, (struct sockaddr *)&server_bind, sizeof(server_bind)) < 0)
     {
-        perror("socket failed");
-        exit(EXIT_FAILURE);
+        perror("Eroare la bind!");
+        exit(1);
     }
 
-    server_addr.sin_family = AF_INET;
-    server_addr.sin_port = htons(port);
-    if (inet_pton(AF_INET, ip, &server_addr.sin_addr) <= 0) 
+    if(listen(server_fd, 5) < 0)
     {
-        perror("inet_pton failed");
-        exit(EXIT_FAILURE);
+        perror("Eroare la listen!");
+        exit(1);
     }
+    printf("Serverul asculta conexiuni...\n");
 
-    // Legăm socketul la adresa și portul specificate
-    if (bind(server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) 
+    while(1)
     {
-        perror("bind failed");
-        close(server_socket);
-        exit(EXIT_FAILURE);
-    }
-
-    // Punem serverul în modul de ascultare
-    if (listen(server_socket, 5) < 0) 
-    {
-        perror("listen failed");
-        close(server_socket);
-        exit(EXIT_FAILURE);
-    }
-
-    printf("Server running on %s:%d\n", ip, port);
-
-    while (1) 
-    {
-        int client_socket;
-        struct sockaddr_in client_addr;
-        socklen_t client_len = sizeof(client_addr);
-
-        // Acceptăm o conexiune de la un client
-        if ((client_socket = accept(server_socket, (struct sockaddr *)&client_addr, &client_len)) < 0) 
+        int *client_socket_ptr = malloc(sizeof(int));
+        if(!client_socket_ptr)
         {
-            perror("accept failed");
+            perror("Eroare la alocarea dinamica!");
             continue;
         }
 
-        // Alocăm memoria pentru argumentele thread-ului
-        thread_args_t *args = malloc(sizeof(thread_args_t));
-        if (args == NULL) 
+        unsigned int client_addr_len = sizeof(client_addr);
+        *client_socket_ptr = accept(server_fd, (struct sockaddr *)&client_addr, &client_addr_len);
+        if(*client_socket_ptr < 0)
         {
-            perror("malloc failed");
-            close(client_socket);
-            continue;
-        }
-        args->client_socket = client_socket;
-
-        // Creăm un thread pentru a gestiona conexiunea clientului
-        pthread_t thread_id;
-        if (pthread_create(&thread_id, NULL, handle_client, args) != 0) 
-        {
-            perror("pthread_create failed");
-            free(args);
-            close(client_socket);
+            perror("Eroare la accept!");
+            free(client_socket_ptr);
             continue;
         }
 
-        // Detach thread-ul pentru a elibera resursele automat după terminare
-        pthread_detach(thread_id);
+        pthread_t thread;
+        if(pthread_create(&thread, NULL, handle_client, client_socket_ptr) != 0)
+        {
+            perror("Eroare la pthread_create!");
+            close(*client_socket_ptr);
+            free(client_socket_ptr);
+            continue;
+        }
+        pthread_detach(thread);
     }
 
-    close(server_socket);
+    close(server_fd);
     return 0;
 }
