@@ -1,3 +1,5 @@
+//server.c
+
 #include<stdio.h>
 #include<string.h>
 #include<stdlib.h>
@@ -44,10 +46,6 @@ void *handle_client(void *client_socket_ptr)
             perror("Eroare la scrierea datelor către client");
             break;
         }
-    }
-    if(bytes_read < 0)
-    {
-        perror("Eroare la citirea datelor de la client");
     }
 
     close(client_fd);
@@ -113,5 +111,61 @@ int main(void)
     }
 
     close(server_fd);
+    return 0;
+}
+
+
+//client.c
+#include<stdio.h>
+#include<stdlib.h>
+#include<string.h>
+#include<arpa/inet.h>
+#include<unistd.h>
+
+#define PORT 8080
+#define BUFFER_SIZE 1024
+
+int main(void)
+{
+    int client_fd;
+    struct sockaddr_in server_addr;
+    char buffer[BUFFER_SIZE];
+
+    if((client_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    {
+        perror("Eroare la crearea socketului!");
+        exit(1);
+    }
+
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(PORT);
+
+    if(connect(client_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0)
+    {
+        perror("Eroare la conectare!");
+        exit(1);
+    }
+
+    printf("Conectat la server. Introduceti textul de trimis (Ctrl+D pentru a iesi):\n");
+    while(fgets(buffer, BUFFER_SIZE, stdin) != NULL)
+    {
+        if(write(client_fd, buffer, strlen(buffer)) < 0)
+        {
+            perror("Eroare la trimiterea datelor!");
+            break;
+        }
+
+        ssize_t bytes_received = read(client_fd, buffer, BUFFER_SIZE - 1);
+        if(bytes_received < 0)
+        {
+            perror("Eroare la primirea raspunsului!");
+            break;
+        }
+        buffer[bytes_received] = '\0';
+        printf("Raspuns de la server: %s\n", buffer);
+    }
+
+    close(client_fd);
     return 0;
 }
