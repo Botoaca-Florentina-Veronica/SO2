@@ -48,7 +48,8 @@ void *find_local_max(void *arg)
     while ((bytesRead = fread(buffer, 1, data->buffer_size, file)) > 0) 
     {
         // Căutăm maximul în buffer
-        for (size_t i = 0; i < bytesRead / sizeof(int); i++) 
+        ssize_t i;
+        for (i = 0; i < bytesRead / sizeof(int); i++) 
         {
             int value = ((int *)buffer)[i];
             if (value > data->local_max) 
@@ -73,16 +74,22 @@ void *find_local_max(void *arg)
     return NULL;
 }
 
-int main() 
+int main(int argc, char *argv[]) 
 {
-    char filePath[256];
-    int i, n;
+    if (argc != 3) 
+    {
+        fprintf(stderr, "Utilizare: %s <cale_fisier> <numar_threaduri>\n", argv[0]);
+        return 1;
+    }
 
-    printf("Introduceti calea catre fisierul binar: ");
-    scanf("%s", filePath);
-    
-    printf("Introduceti numarul de thread-uri: ");
-    scanf("%d", &n);
+    const char *filePath = argv[1];
+    int n = atoi(argv[2]);
+
+    if (n <= 0) 
+    {
+        fprintf(stderr, "Numarul de thread-uri trebuie sa fie un numar pozitiv.\n");
+        return 1;
+    }
 
     // Obținem dimensiunea fișierului
     struct stat st;
@@ -106,6 +113,7 @@ int main()
     pthread_t threads[n];
 
     // Creăm thread-urile
+    int i;
     for (i = 0; i < n; i++) 
     {
         ThreadData *data = malloc(sizeof(ThreadData));
