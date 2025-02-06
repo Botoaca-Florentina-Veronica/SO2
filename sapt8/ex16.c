@@ -111,7 +111,9 @@ int main(int argc, char **argv)
             perror("Eroare la alocarea dinamica!");
             exit(1);
         }
-        
+
+        //daca ma aflu la ultimul thread, atunci lui ii voi atribui restul de continut
+        //ramas in cazul unei impartiri inegale de threaduri
         if (i == N - 1) 
         {
             data->length = fileSize - i * segment_size;
