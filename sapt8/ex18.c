@@ -5,6 +5,8 @@ sa se incrementeze numarul de interschimbari comun de la cele 2 threaduri. Setea
 fiecare thread pe un cpu diferit. 
 */
 
+
+
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,31 +23,32 @@ int swap_count = 0;  // Variabilă globală pentru numărul total de interschimb
 // Funcție pentru generarea unui vector cu numere > 30000
 void generate_random_numbers(int *arr, int size) 
 {
-    int i;
-    for (i = 0; i < size; i++) 
+    for (int i = 0; i < size; i++) 
     {
         arr[i] = MIN_VALUE + rand() % 10000;
     }
 }
 
-// Bubble Sort - returnează numărul de interschimbări
-int bubble_sort(int *arr, int size) 
+// Funcție Bubble Sort modificată pentru a returna numărul de interschimbări
+void BubbleSort(int *v, int n, int *swap_counter)
 {
-    int swap_counter = 0;
-    for (int i = 0; i < size - 1; i++) 
-    {
-        for (int j = 0; j < size - i - 1; j++) 
-        {
-            if (arr[j] > arr[j + 1]) 
-            {
-                int temp = arr[j];
-                arr[j] = arr[j + 1];
-                arr[j + 1] = temp;
-                swap_counter++;
+    int s, i, aux;
+    *swap_counter = 0; // Inițializăm contorul
+
+    do {
+        s = 0;  
+        for (i = 1; i < n; i++) 
+        {      
+            if (v[i - 1] > v[i]) 
+            {             
+                aux = v[i - 1];                 
+                v[i - 1] = v[i];
+                v[i] = aux;
+                s = 1;  
+                (*swap_counter)++;  // Incrementăm contorul de interschimbări
             }
         }
-    }
-    return swap_counter;
+    } while (s);
 }
 
 // Funcția executată de fiecare thread
@@ -59,7 +62,9 @@ void *sort_thread(void *arg)
     }
 
     generate_random_numbers(arr, SIZE);  // Generare numere
-    int local_swaps = bubble_sort(arr, SIZE);  // Sortare și contorizare interschimbări
+
+    int local_swaps;
+    BubbleSort(arr, SIZE, &local_swaps);  // Sortare și contorizare interschimbări
 
     // Actualizare sincronizată a contorului global
     pthread_mutex_lock(&mutex);
@@ -79,7 +84,7 @@ void set_thread_affinity(pthread_t thread, int cpu_id)
     pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
 }
 
-int main() 
+int main(void) 
 {
     pthread_t thread1, thread2;
     srand(time(NULL));
